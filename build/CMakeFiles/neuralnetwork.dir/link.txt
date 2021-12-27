@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -rdynamic CMakeFiles/neuralnetwork.dir/main.cpp.o -o neuralnetwork 

@@ -1,0 +1,7 @@
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/neuralnetwork.dir
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/edit_cache.dir
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/rebuild_cache.dir
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/list_install_components.dir
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/install.dir
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/install/local.dir
+/home/aileen/projects/NeuralNetwork/build/CMakeFiles/install/strip.dir
