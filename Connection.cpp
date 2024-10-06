@@ -1,5 +1,5 @@
-class Connection {
-public:
+struct Connection
+{
 	double weight;
 	double deltaWeight;
 };

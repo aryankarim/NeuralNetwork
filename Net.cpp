@@ -15,80 +15,58 @@ public:
     void feedForward(const vector<double> &inputVals);
     void backProp(const vector<double> &targetVals);
     void getResults(vector<double> &resultVals) const;
-    double getRecentAverageError(void) const { return recentAverageError; }
+    double getRecentAverageError(void) const { return m_recentAverageError; }
 
 private:
-    vector<Layer> all_layers;
-    double error;
-    double recentAverageError;
-    double recentAverageSmoothingFactor;
+    vector<Layer> m_layers; // m_layers[layerNum][neuronNum]
+    double m_error;
+    double m_recentAverageError;
+    static double m_recentAverageSmoothingFactor;
 };
 
-Net::Net(const vector<unsigned> &topology)
+double Net::m_recentAverageSmoothingFactor = 100.0; // Number of training samples to average over
+
+void Net::getResults(vector<double> &resultVals) const
 {
+    resultVals.clear();
 
-    unsigned numLayers = topology.size();
-    for (unsigned layerNum = 0; layerNum < numLayers; ++layerNum)
+    for (unsigned n = 0; n < m_layers.back().size() - 1; ++n)
     {
-        all_layers.push_back(Layer());
-        unsigned numOutputs = layerNum == topology.size() - 1 ? 0 : topology[layerNum + 1];
-
-        for (unsigned neuronNum = 0; neuronNum <= topology[layerNum]; ++neuronNum)
-        {
-            all_layers.back().push_back(Neuron(numOutputs, neuronNum));
-            cout << "Made a neuron!" << endl;
-        }
-
-        // bias neuron init
-        all_layers.back().back().setOutputVal(1.0);
-    }
-};
-
-void Net::feedForward(const vector<double> &inputVals)
-{
-
-    assert(inputVals.size() == all_layers[0].size() - 1);
-
-    for (unsigned i = 0; i < inputVals.size(); i++)
-    {
-        all_layers[0][i].setOutputVal(inputVals[i]);
-    }
-
-    for (unsigned layerNum = 0; layerNum < all_layers.size(); layerNum++)
-    {
-        Layer &prevLayer = all_layers[layerNum - 1];
-        for (unsigned n = 0; n < all_layers[layerNum].size(); n++)
-        {
-            all_layers[layerNum][n].feedForward(prevLayer);
-        }
+        resultVals.push_back(m_layers.back()[n].getOutputVal());
     }
 }
 
-void Net::backProp(const vector<double> &targetVals)
+void Net::backProp(const std::vector<double> &targetVals)
 {
+    // Calculate overal net error (RMS of output neuron errors)
 
-    // Calculate overall net error -- RMS of output neuron errors
+    Layer &outputLayer = m_layers.back();
+    m_error = 0.0;
 
-    Layer &outputLayer = all_layers.back();
-    error = 0.0;
+    for (unsigned n = 0; n < outputLayer.size() - 1; ++n)
+    {
+        double delta = targetVals[n] - outputLayer[n].getOutputVal();
+        m_error += delta * delta;
+    }
+    m_error /= outputLayer.size() - 1; // get average error squared
+    m_error = sqrt(m_error);           // RMS
 
-    // Recent Average Mesurement
+    // Implement a recent average measurement:
 
-    recentAverageError = (recentAverageError * recentAverageSmoothingFactor + error) / (recentAverageSmoothingFactor + 1);
-
-    // Calcualte output layer gradients
+    m_recentAverageError =
+        (m_recentAverageError * m_recentAverageSmoothingFactor + m_error) / (m_recentAverageSmoothingFactor + 1.0);
+    // Calculate output layer gradients
 
     for (unsigned n = 0; n < outputLayer.size() - 1; ++n)
     {
         outputLayer[n].calcOutputGradients(targetVals[n]);
     }
-
     // Calculate gradients on hidden layers
 
-    for (unsigned layerNum = all_layers.size() - 2; layerNum > 0; --layerNum)
+    for (unsigned layerNum = m_layers.size() - 2; layerNum > 0; --layerNum)
     {
-        Layer &hiddenLayer = all_layers[layerNum];
-        Layer &nextLayer = all_layers[layerNum + 1];
+        Layer &hiddenLayer = m_layers[layerNum];
+        Layer &nextLayer = m_layers[layerNum + 1];
 
         for (unsigned n = 0; n < hiddenLayer.size(); ++n)
         {
@@ -96,26 +74,61 @@ void Net::backProp(const vector<double> &targetVals)
         }
     }
 
-    //  For all layers form outpus to first hidden layer, update connection weight
+    // For all layers from outputs to first hidden layer,
+    // update connection weights
 
-    for (unsigned layerNum = all_layers.size() - 1; layerNum > 0; --layerNum)
+    for (unsigned layerNum = m_layers.size() - 1; layerNum > 0; --layerNum)
     {
-        Layer &layer = all_layers[layerNum];
-        Layer &prevLayer = all_layers[layerNum - 1];
+        Layer &layer = m_layers[layerNum];
+        Layer &prevLayer = m_layers[layerNum - 1];
 
         for (unsigned n = 0; n < layer.size() - 1; ++n)
         {
-            layer[n].updateInputWeight(prevLayer);
+            layer[n].updateInputWeights(prevLayer);
         }
     }
 }
 
-void Net::getResults(vector<double> &resultVals) const
+void Net::feedForward(const vector<double> &inputVals)
 {
-    resultVals.clear();
+    // Check the num of inputVals euqal to neuronnum expect bias
+    assert(inputVals.size() == m_layers[0].size() - 1);
 
-    for (unsigned n = 0; n < all_layers.size() - 1; n++)
+    // Assign {latch} the input values into the input neurons
+    for (unsigned i = 0; i < inputVals.size(); ++i)
     {
-        resultVals.push_back(all_layers.back()[n].getOutputVal());
+        m_layers[0][i].setOutputVal(inputVals[i]);
     }
-};
+
+    // Forward propagate
+    for (unsigned layerNum = 1; layerNum < m_layers.size(); ++layerNum)
+    {
+        Layer &prevLayer = m_layers[layerNum - 1];
+        for (unsigned n = 0; n < m_layers[layerNum].size() - 1; ++n)
+        {
+            m_layers[layerNum][n].feedForward(prevLayer);
+        }
+    }
+}
+Net::Net(const vector<unsigned> &topology)
+{
+    unsigned numLayers = topology.size();
+    for (unsigned layerNum = 0; layerNum < numLayers; ++layerNum)
+    {
+        m_layers.push_back(Layer());
+        // numOutputs of layer[i] is the numInputs of layer[i+1]
+        // numOutputs of last layer is 0
+        unsigned numOutputs = layerNum == topology.size() - 1 ? 0 : topology[layerNum + 1];
+
+        // We have made a new Layer, now fill it ith neurons, and
+        // add a bias neuron to the layer:
+        for (unsigned neuronNum = 0; neuronNum <= topology[layerNum]; ++neuronNum)
+        {
+            m_layers.back().push_back(Neuron(numOutputs, neuronNum));
+            cout << "Mad a Neuron!" << endl;
+        }
+
+        // Force the bias node's output value to 1.0. It's the last neuron created above
+        m_layers.back().back().setOutputVal(1.0);
+    }
+}
