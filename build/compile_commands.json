@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/aileen/projects/NeuralNetwork/build",
-  "command": "/usr/bin/c++   -g -o CMakeFiles/neuralnetwork.dir/main.cpp.o -c /home/aileen/projects/NeuralNetwork/main.cpp",
-  "file": "/home/aileen/projects/NeuralNetwork/main.cpp"
-}
-]
